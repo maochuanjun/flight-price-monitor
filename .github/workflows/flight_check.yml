@@ -36,6 +36,14 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f GitHub/requirements.txt ]; then pip install -r GitHub/requirements.txt; fi
 
+      - name: Debug Environment Variables
+        run: |
+          echo "Checking environment variables..."
+          if [ -z "$DATE_TO_GO" ]; then echo "Error: DATE_TO_GO is empty"; else echo "DATE_TO_GO is set (length: ${#DATE_TO_GO})"; fi
+          if [ -z "$PLACE_FROM" ]; then echo "Error: PLACE_FROM is empty"; else echo "PLACE_FROM is set to $PLACE_FROM"; fi
+          if [ -z "$EMAIL_SENDER" ]; then echo "Error: EMAIL_SENDER is empty"; else echo "EMAIL_SENDER is set (length: ${#EMAIL_SENDER})"; fi
+          echo "Debug check complete."
+
       - name: Run flight check script
         # 注意：这里假设脚本在 GitHub 目录下，且工作目录是仓库根目录
         # 脚本会读取/写入 GitHub/price_history.json (因为我们在脚本里定义的是相对路径)
