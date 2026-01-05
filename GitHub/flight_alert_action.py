@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 
 # 常量定义
 BASE_URL = "https://flights.ctrip.com/itinerary/api/12808/lowestPrice?"
-RETRY_DELAY = 30  # 重试等待时间（秒）
-REQUEST_TIMEOUT = 10  # 请求超时时间（秒）
+RETRY_DELAY = 5  # 重试等待时间（秒）
+REQUEST_TIMEOUT = 30  # 请求超时时间（秒）
+MAX_RETRIES = 3  # 最大重试次数
 HISTORY_FILE = "price_history.json"
 
 # 请求头，模拟浏览器以避免被拦截
@@ -393,20 +394,25 @@ def fetch_flight_prices(config: dict, direct: bool = True) -> dict:
     if direct:
         params["direct"] = "true"
 
-    try:
-        response = requests.get(
-            BASE_URL, params=params, headers=HEADERS, timeout=REQUEST_TIMEOUT
-        )
-        response.raise_for_status()
-        data = response.json()
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = requests.get(
+                BASE_URL, params=params, headers=HEADERS, timeout=REQUEST_TIMEOUT
+            )
+            response.raise_for_status()
+            data = response.json()
 
-        if data.get("status") == 2:
-            raise ValueError(f"API返回错误状态: {data.get('msg', '未知错误')}")
+            if data.get("status") == 2:
+                raise ValueError(f"API返回错误状态: {data.get('msg', '未知错误')}")
 
-        return data
-    except requests.exceptions.RequestException as e:
-        logger.error(f"获取{'直飞' if direct else '非直飞'}航班价格失败: {e}")
-        raise
+            return data
+        except (requests.exceptions.RequestException, ValueError) as e:
+            if attempt < MAX_RETRIES - 1:
+                logger.warning(f"获取{'直飞' if direct else '非直飞'}航班价格失败 (尝试 {attempt + 1}/{MAX_RETRIES}): {e}. {RETRY_DELAY}秒后重试...")
+                time.sleep(RETRY_DELAY)
+            else:
+                logger.error(f"获取{'直飞' if direct else '非直飞'}航班价格最终失败: {e}")
+                raise
 
 
 def main():
