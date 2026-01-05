@@ -43,3 +43,6 @@ Thumbs.db
 *.exe
 *.log
 config_backup.json
+config.json
+github_secrets.txt
+price_history.json
